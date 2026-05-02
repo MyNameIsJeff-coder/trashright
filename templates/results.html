@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}{{ query }} — TrashRight{% endblock %}
+
+{% block content %}
+
+<!-- Back — goes to category if arrived from one, otherwise home -->
+<a href="/" class="back-btn" id="backBtn" aria-label="Go back">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 2L4 7l5 5"/>
+    </svg>
+    <span id="backLabel">Back to home</span>
+</a>
+<script>
+(function () {
+    try {
+        const ref = document.referrer;
+        if (!ref) return;
+        const refUrl = new URL(ref);
+        if (refUrl.origin !== window.location.origin) return;
+        const catMatch = refUrl.pathname.match(/^\/category\/(.+)$/);
+        if (catMatch) {
+            const btn = document.getElementById('backBtn');
+            const lbl = document.getElementById('backLabel');
+            btn.setAttribute('href', '/category/' + catMatch[1]);
+            lbl.textContent = 'Back to ' + decodeURIComponent(catMatch[1]);
+        }
+    } catch (e) {}
+})();
+</script>
+
+<!-- Loading state -->
+<div id="stateLoading" class="loading-state" role="status" aria-live="polite">
+    <div class="spinner"></div>
+    <div class="loading-text">Classifying your waste…</div>
+</div>
+
+<!-- Result state -->
+<div id="stateResult" style="display:none;" class="fade-up">
+
+    <div class="result-hero">
+        <div class="result-for">Result for</div>
+        <div class="result-name" id="rName"></div>
+        <div class="badge-row">
+            <div class="category-badge" id="rBadge">
+                <span class="badge-icon" id="rBadgeIcon"></span>
+                <span id="rBadgeText"></span>
+            </div>
+            <div class="confidence-pill">
+                <span class="conf-dot"></span>
+                <span id="rConfidence">Exact match</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-hd">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="7" cy="7" r="5.5"/>
+                <path d="M7 6v4M7 4.2v.4"/>
+            </svg>
+            Disposal instructions
+        </div>
+        <div class="steps" id="rSteps"></div>
+    </div>
+
+    <div class="info-card" id="tipsCard" style="display:none;">
+        <div class="info-card-hd tips-hd">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 1a4 4 0 0 1 2 7.46V10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8.46A4 4 0 0 1 7 1z"/>
+                <path d="M5 13h4"/>
+            </svg>
+            Reuse tips
+        </div>
+        <div class="tips-list" id="rTips"></div>
+    </div>
+
+    <!-- Drop-off locator — only shown for Hazardous items -->
+    <a id="locatorBtn" href="#" target="_blank" rel="noopener noreferrer"
+       class="locator-btn" style="display:none;" aria-label="Find drop-off location near me">
+        <div class="locator-icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 2a6 6 0 0 1 6 6c0 4-6 10-6 10S4 12 4 8a6 6 0 0 1 6-6z"/>
+                <circle cx="10" cy="8" r="2"/>
+            </svg>
+        </div>
+        <div class="locator-text">
+            <div class="locator-title">Find drop-off near me</div>
+            <div class="locator-sub">Opens Google Maps with nearby disposal facilities</div>
+        </div>
+        <svg class="locator-arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 2l5 5-5 5"/>
+        </svg>
+    </a>
+
+    <div class="info-card" id="matchesCard" style="display:none;">
+        <div class="info-card-hd">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="7" cy="5" r="2.5"/>
+                <path d="M1.5 12.5c0-2.5 2.5-4 5.5-4s5.5 1.5 5.5 4"/>
+            </svg>
+            Other possible matches
+        </div>
+        <div class="match-pills" id="rMatches"></div>
+    </div>
+
+</div>
+
+<!-- Not found state -->
+<div id="stateNotFound" style="display:none;" class="fade-up">
+    <div class="not-found-box">
+        <div class="not-found-icon" aria-hidden="true">
+            <svg viewBox="0 0 44 44" fill="none" stroke="#f87171" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="22" cy="22" r="18"/>
+                <path d="M22 14v10M22 28.5v1"/>
+            </svg>
+        </div>
+        <div class="not-found-title">Item not found</div>
+        <p class="not-found-msg">
+            We couldn't find <strong id="nfQuery"></strong> in our database.<br>
+            Try a simpler term or check your spelling.
+        </p>
+        <div class="not-found-actions">
+            <a href="/" class="btn-primary">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M7 1L1 7l6 6M1 7h12"/>
+                </svg>
+                Try another item
+            </a>
+            <a href="/" class="btn-secondary">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9 2L4 7l5 5"/><path d="M4 7h9"/>
+                </svg>
+                Refine search
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const QUERY = {{ query | tojson }};
+
+    // Icons come directly from the database (match.icon)
+
+    /* Split instructions into clean sentences/steps for numbered display */
+    function splitSteps(text) {
+        return text
+            .split(/(?<=[.!?])\s+/)
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+    }
+
+    function renderResult(match, isExact) {
+        document.getElementById('rName').textContent = match.name;
+
+        const badge = document.getElementById('rBadge');
+        badge.className = 'category-badge badge-' + match.category.replace(/\s+/g, '-');
+        document.getElementById('rBadgeIcon').textContent = match.icon || '🗑️';
+        document.getElementById('rBadgeText').textContent = match.category;
+        document.getElementById('rConfidence').textContent = isExact ? 'Exact match' : 'Close match';
+
+        const stepsEl = document.getElementById('rSteps');
+        const steps   = splitSteps(match.instructions);
+        stepsEl.innerHTML = steps
+            .map((s, i) => `
+                <div class="step">
+                    <div class="step-num" aria-hidden="true">${i + 1}</div>
+                    <div class="step-text">${s}</div>
+                </div>`)
+            .join('');
+
+        // Tips section
+        const tipsCard = document.getElementById('tipsCard');
+        const tipsEl   = document.getElementById('rTips');
+        if (match.tips && match.tips.trim()) {
+            const tips = splitSteps(match.tips);
+            tipsEl.innerHTML = tips.map(t => `
+                <div class="tip-item">
+                    <span class="tip-bullet" aria-hidden="true">💡</span>
+                    <span class="tip-text">${t}</span>
+                </div>`).join('');
+            tipsCard.style.display = 'block';
+        } else {
+            tipsCard.style.display = 'none';
+        }
+
+        // Drop-off locator — only for Hazardous items
+        const locatorBtn = document.getElementById('locatorBtn');
+        if (match.category === 'Hazardous') {
+            // Build a Google Maps search URL: "<item name> disposal drop-off near me"
+            const query = encodeURIComponent(match.name + ' disposal drop-off near me');
+            locatorBtn.setAttribute('href', 'https://www.google.com/maps/search/' + query);
+            locatorBtn.style.display = 'flex';
+        } else {
+            locatorBtn.style.display = 'none';
+        }
+    }
+
+    function renderMatches(matches, activeIndex) {
+        const container = document.getElementById('rMatches');
+        const card      = document.getElementById('matchesCard');
+
+        if (matches.length <= 1) { card.style.display = 'none'; return; }
+
+        card.style.display = 'block';
+        container.innerHTML = matches
+            .map((m, i) => `
+                <button
+                    class="match-pill${i === activeIndex ? ' active' : ''}"
+                    type="button"
+                    data-index="${i}"
+                    aria-pressed="${i === activeIndex}"
+                >${m.name}</button>`)
+            .join('');
+
+        container.querySelectorAll('.match-pill').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const idx = parseInt(this.dataset.index, 10);
+                container.querySelectorAll('.match-pill').forEach((b, i) => {
+                    b.classList.toggle('active', i === idx);
+                    b.setAttribute('aria-pressed', i === idx);
+                });
+                renderResult(matches[idx], false);
+            });
+        });
+    }
+
+    function showState(id) {
+        ['stateLoading', 'stateResult', 'stateNotFound'].forEach(s => {
+            const el = document.getElementById(s);
+            el.style.display = (s === id) ? 'block' : 'none';
+        });
+    }
+
+    async function loadResults() {
+        showState('stateLoading');
+
+        try {
+            const res  = await fetch('/api/search?q=' + encodeURIComponent(QUERY));
+            const data = await res.json();
+
+            if (!data.found || !data.matches || data.matches.length === 0) {
+                document.getElementById('nfQuery').textContent = '"' + QUERY + '"';
+                showState('stateNotFound');
+                return;
+            }
+
+            const isExact = data.matches[0].name.toLowerCase() === QUERY.toLowerCase();
+            renderResult(data.matches[0], isExact);
+            renderMatches(data.matches, 0);
+            showState('stateResult');
+
+        } catch (err) {
+            document.getElementById('nfQuery').textContent = '"' + QUERY + '"';
+            showState('stateNotFound');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadResults);
+</script>
+{% endblock %}

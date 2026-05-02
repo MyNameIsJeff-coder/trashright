@@ -1,0 +1,30 @@
+{
+    "name": "TrashRight",
+    "short_name": "TrashRight",
+    "description": "Smart waste segregation guide — dispose smarter, segregate with confidence.",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#020f07",
+    "theme_color": "#16a34a",
+    "scope": "/",
+    "lang": "en",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='38' fill='%23052e16'/><text y='130' x='96' text-anchor='middle' font-size='110'>♻️</text></svg>",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23052e16'/><text y='360' x='256' text-anchor='middle' font-size='300'>♻️</text></svg>",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["education", "utilities", "lifestyle"],
+    "screenshots": [],
+    "related_applications": [],
+    "prefer_related_applications": false
+}

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="TrashRight — Smart waste segregation guide. Find out how to properly dispose of any waste item.">
+    <meta name="theme-color" content="#16a34a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TrashRight">
+    <title>{% block title %}TrashRight{% endblock %}</title>
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- App icon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♻️</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='38' fill='%23052e16'/><text y='140' x='96' text-anchor='middle' font-size='110'>♻️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Firefly canvas -->
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+    <!--
+        Nature SVG scene.
+        viewBox="0 0 1000 700" — all coordinates are PIXELS in this space.
+        The SVG is stretched via CSS (width:100%;height:100%;position:fixed)
+        so it always fills the viewport.
+        IMPORTANT: SVG path d= and polygon points= do NOT support % values.
+        All coordinates below are plain numbers (px within the viewBox).
+    -->
+    <svg id="nature-svg" aria-hidden="true"
+         xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 1000 700"
+         preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <!-- Ground gradient -->
+        <linearGradient id="gnd" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#14532d" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#052e16" stop-opacity="1"/>
+        </linearGradient>
+        <!-- Moon radial gradient — warm white centre fading to transparent -->
+        <radialGradient id="moonGrad" cx="40%" cy="38%" r="60%">
+          <stop offset="0%"   stop-color="#fffff0" stop-opacity="1"/>
+          <stop offset="45%"  stop-color="#fef9c3" stop-opacity="0.95"/>
+          <stop offset="80%"  stop-color="#fef9c3" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#fef9c3" stop-opacity="0"/>
+        </radialGradient>
+        <!-- Glow blur -->
+        <filter id="gbl" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6"/>
+        </filter>
+        <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="10"/>
+        </filter>
+      </defs>
+
+      <!-- ══ STARS (px coords, small radius in px) ══ -->
+      <circle cx="50"  cy="22"  r="1.2" fill="white" opacity="0.65"/>
+      <circle cx="160" cy="14"  r="0.9" fill="white" opacity="0.5"/>
+      <circle cx="270" cy="26"  r="1.4" fill="white" opacity="0.6"/>
+      <circle cx="380" cy="10"  r="0.9" fill="white" opacity="0.4"/>
+      <circle cx="470" cy="20"  r="1.1" fill="white" opacity="0.7"/>
+      <circle cx="560" cy="10"  r="1.6" fill="white" opacity="0.6"/>
+      <circle cx="650" cy="28"  r="0.9" fill="white" opacity="0.5"/>
+      <circle cx="750" cy="18"  r="1.2" fill="white" opacity="0.65"/>
+      <circle cx="840" cy="30"  r="1.0" fill="white" opacity="0.4"/>
+      <circle cx="915" cy="14"  r="1.4" fill="white" opacity="0.6"/>
+      <circle cx="130" cy="16"  r="1.9" fill="white" opacity="0.8">
+        <animate attributeName="opacity" values="0.8;0.15;0.8" dur="3.2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="490" cy="30"  r="1.7" fill="white" opacity="0.7">
+        <animate attributeName="opacity" values="0.7;0.1;0.7" dur="4.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="800" cy="22"  r="2.0" fill="white" opacity="0.75">
+        <animate attributeName="opacity" values="0.75;0.15;0.75" dur="2.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="330" cy="18"  r="1.5" fill="white" opacity="0.6">
+        <animate attributeName="opacity" values="0.6;0.08;0.6" dur="5.1s" repeatCount="indefinite"/>
+      </circle>
+
+      <!-- ══ MOON ══ -->
+      <!-- Outer glow ring -->
+      <circle cx="840" cy="68" r="38" fill="rgba(254,249,195,0.07)" filter="url(#glow)"/>
+      <!-- Moon disc with warm radial gradient -->
+      <circle cx="840" cy="68" r="26" fill="url(#moonGrad)"/>
+      <!-- Subtle halo ring -->
+      <circle cx="840" cy="68" r="34" fill="none" stroke="rgba(254,249,195,0.12)" stroke-width="1.5"/>
+      <!-- Gentle pulse -->
+      <circle cx="840" cy="68" r="26" fill="url(#moonGrad)">
+        <animate attributeName="opacity" values="1;0.82;1" dur="6s" repeatCount="indefinite"/>
+      </circle>
+
+      <!-- ══ GROUND ══ -->
+      <rect x="0" y="610" width="1000" height="90" fill="url(#gnd)" opacity="0.92"/>
+      <rect x="0" y="650" width="1000" height="50" fill="#052e16" opacity="0.7"/>
+      <!-- Ground glow line -->
+      <ellipse cx="500" cy="612" rx="420" ry="8" fill="rgba(34,197,94,0.2)" filter="url(#gbl)"/>
+
+      <!-- ══ BIG TREE LEFT ══ -->
+      <!-- Trunk -->
+      <path d="M78 614 Q72 530 68 448 Q64 370 60 295" stroke="#1a3a1a" stroke-width="18" fill="none" stroke-linecap="round"/>
+      <path d="M78 614 Q84 530 88 448 Q92 370 96 295" stroke="#1f4a1f" stroke-width="13" fill="none" stroke-linecap="round"/>
+      <!-- Branches -->
+      <path d="M64 400 Q34 368 12 332" stroke="#1a3a1a" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="M88 430 Q118 398 140 368" stroke="#1a3a1a" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <!-- Foliage (layered circles) -->
+      <circle cx="78"  cy="248" r="78"  fill="#14532d" opacity="0.85"/>
+      <circle cx="28"  cy="278" r="60"  fill="#15803d" opacity="0.78"/>
+      <circle cx="132" cy="272" r="64"  fill="#16a34a" opacity="0.72"/>
+      <circle cx="72"  cy="182" r="68"  fill="#15803d" opacity="0.80"/>
+      <circle cx="122" cy="208" r="54"  fill="#22c55e" opacity="0.62"/>
+      <circle cx="18"  cy="212" r="52"  fill="#14532d" opacity="0.68"/>
+      <circle cx="78"  cy="122" r="60"  fill="#16a34a" opacity="0.72"/>
+      <circle cx="28"  cy="148" r="46"  fill="#15803d" opacity="0.62"/>
+      <circle cx="132" cy="138" r="48"  fill="#22c55e" opacity="0.55"/>
+      <circle cx="85"  cy="138" r="22"  fill="#4ade80" opacity="0.22"/>
+      <!-- Tree glow at base -->
+      <ellipse cx="78" cy="612" rx="60" ry="9" fill="rgba(34,197,94,0.22)" filter="url(#gbl)"/>
+
+      <!-- ══ BIG TREE RIGHT ══ -->
+      <path d="M922 614 Q928 530 932 448 Q936 370 940 295" stroke="#1a3a1a" stroke-width="18" fill="none" stroke-linecap="round"/>
+      <path d="M922 614 Q916 530 912 448 Q908 370 904 295" stroke="#1f4a1f" stroke-width="13" fill="none" stroke-linecap="round"/>
+      <path d="M936 400 Q966 368 988 332" stroke="#1a3a1a" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="M912 430 Q882 398 860 368" stroke="#1a3a1a" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <circle cx="922"  cy="248" r="78"  fill="#14532d" opacity="0.85"/>
+      <circle cx="972"  cy="278" r="60"  fill="#15803d" opacity="0.78"/>
+      <circle cx="868"  cy="272" r="64"  fill="#16a34a" opacity="0.72"/>
+      <circle cx="928"  cy="182" r="68"  fill="#15803d" opacity="0.80"/>
+      <circle cx="878"  cy="208" r="54"  fill="#22c55e" opacity="0.62"/>
+      <circle cx="982"  cy="212" r="52"  fill="#14532d" opacity="0.68"/>
+      <circle cx="922"  cy="122" r="60"  fill="#16a34a" opacity="0.72"/>
+      <circle cx="972"  cy="148" r="46"  fill="#22c55e" opacity="0.55"/>
+      <circle cx="868"  cy="138" r="48"  fill="#15803d" opacity="0.62"/>
+      <circle cx="915"  cy="138" r="22"  fill="#4ade80" opacity="0.22"/>
+      <ellipse cx="922" cy="612" rx="60" ry="9" fill="rgba(34,197,94,0.22)" filter="url(#gbl)"/>
+
+      <!-- ══ PINE TREE CENTER ══ -->
+      <line x1="500" y1="614" x2="500" y2="390" stroke="#0f2d0f" stroke-width="7" stroke-linecap="round"/>
+      <polygon points="500,295 448,430 552,430" fill="#14532d" opacity="0.82"/>
+      <polygon points="500,255 452,400 548,400" fill="#15803d" opacity="0.78"/>
+      <polygon points="500,220 456,375 544,375" fill="#16a34a" opacity="0.74"/>
+      <polygon points="500,188 460,350 540,350" fill="#22c55e" opacity="0.66"/>
+      <polygon points="500,160 464,328 536,328" fill="#4ade80" opacity="0.38"/>
+
+      <!-- ══ PINE LEFT ══ -->
+      <line x1="250" y1="614" x2="250" y2="420" stroke="#0f2d0f" stroke-width="6" stroke-linecap="round"/>
+      <polygon points="250,328 210,454 290,454" fill="#15803d" opacity="0.78"/>
+      <polygon points="250,292 214,425 286,425" fill="#16a34a" opacity="0.72"/>
+      <polygon points="250,260 218,398 282,398" fill="#22c55e" opacity="0.64"/>
+
+      <!-- ══ PINE RIGHT ══ -->
+      <line x1="750" y1="614" x2="750" y2="420" stroke="#0f2d0f" stroke-width="6" stroke-linecap="round"/>
+      <polygon points="750,328 710,454 790,454" fill="#14532d" opacity="0.78"/>
+      <polygon points="750,292 714,425 786,425" fill="#15803d" opacity="0.72"/>
+      <polygon points="750,260 718,398 782,398" fill="#22c55e" opacity="0.64"/>
+
+      <!-- ══ MEDIUM TREES ══ -->
+      <path d="M175 614 Q171 554 168 490 Q165 430 162 374" stroke="#1a3a1a" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <circle cx="165" cy="332" r="52" fill="#15803d" opacity="0.76"/>
+      <circle cx="130" cy="352" r="40" fill="#16a34a" opacity="0.68"/>
+      <circle cx="200" cy="350" r="38" fill="#22c55e" opacity="0.62"/>
+      <circle cx="164" cy="288" r="44" fill="#15803d" opacity="0.72"/>
+
+      <path d="M825 614 Q829 554 832 490 Q835 430 838 374" stroke="#1a3a1a" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <circle cx="835" cy="332" r="52" fill="#14532d" opacity="0.76"/>
+      <circle cx="800" cy="352" r="40" fill="#15803d" opacity="0.68"/>
+      <circle cx="870" cy="350" r="38" fill="#22c55e" opacity="0.62"/>
+      <circle cx="836" cy="288" r="44" fill="#16a34a" opacity="0.72"/>
+
+      <!-- ══ BUSHES ══ -->
+      <circle cx="190" cy="610" r="34" fill="#15803d" opacity="0.82"/>
+      <circle cx="158" cy="616" r="27" fill="#16a34a" opacity="0.76"/>
+      <circle cx="220" cy="615" r="24" fill="#22c55e" opacity="0.68"/>
+      <circle cx="810" cy="610" r="34" fill="#15803d" opacity="0.82"/>
+      <circle cx="842" cy="616" r="27" fill="#16a34a" opacity="0.76"/>
+      <circle cx="780" cy="615" r="24" fill="#22c55e" opacity="0.68"/>
+      <circle cx="348" cy="616" r="27" fill="#16a34a" opacity="0.70"/>
+      <circle cx="652" cy="616" r="27" fill="#15803d" opacity="0.70"/>
+      <circle cx="500" cy="620" r="22" fill="#22c55e" opacity="0.60"/>
+
+      <!-- ══ SUNFLOWER (left) ══ -->
+      <line x1="143" y1="618" x2="143" y2="593" stroke="#854d0e" stroke-width="3" stroke-linecap="round"/>
+      <!-- petals -->
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#fbbf24" transform="rotate(0   143 588)"/>
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#f59e0b" transform="rotate(45  143 588)"/>
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#fbbf24" transform="rotate(90  143 588)"/>
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#f59e0b" transform="rotate(135 143 588)"/>
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#fbbf24" transform="rotate(180 143 588)"/>
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#f59e0b" transform="rotate(225 143 588)"/>
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#fbbf24" transform="rotate(270 143 588)"/>
+      <ellipse cx="143" cy="580" rx="5" ry="11" fill="#f59e0b" transform="rotate(315 143 588)"/>
+      <circle cx="143" cy="588" r="8" fill="#78350f"/>
+      <circle cx="143" cy="588" r="5" fill="#92400e"/>
+
+      <!-- ══ PINK FLOWERS (right) ══ -->
+      <line x1="836" y1="618" x2="836" y2="596" stroke="#166534" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="836" cy="585" rx="4" ry="9"  fill="#ec4899" transform="rotate(0   836 594)"/>
+      <ellipse cx="836" cy="585" rx="4" ry="9"  fill="#f472b6" transform="rotate(60  836 594)"/>
+      <ellipse cx="836" cy="585" rx="4" ry="9"  fill="#ec4899" transform="rotate(120 836 594)"/>
+      <ellipse cx="836" cy="585" rx="4" ry="9"  fill="#f472b6" transform="rotate(180 836 594)"/>
+      <ellipse cx="836" cy="585" rx="4" ry="9"  fill="#ec4899" transform="rotate(240 836 594)"/>
+      <ellipse cx="836" cy="585" rx="4" ry="9"  fill="#f472b6" transform="rotate(300 836 594)"/>
+      <circle cx="836" cy="594" r="6" fill="#fde68a"/>
+
+      <!-- Second pink flower -->
+      <line x1="862" y1="618" x2="862" y2="600" stroke="#166534" stroke-width="2" stroke-linecap="round"/>
+      <ellipse cx="862" cy="591" rx="3.5" ry="8" fill="#f9a8d4" transform="rotate(0   862 600)"/>
+      <ellipse cx="862" cy="591" rx="3.5" ry="8" fill="#ec4899" transform="rotate(72  862 600)"/>
+      <ellipse cx="862" cy="591" rx="3.5" ry="8" fill="#f9a8d4" transform="rotate(144 862 600)"/>
+      <ellipse cx="862" cy="591" rx="3.5" ry="8" fill="#ec4899" transform="rotate(216 862 600)"/>
+      <ellipse cx="862" cy="591" rx="3.5" ry="8" fill="#f9a8d4" transform="rotate(288 862 600)"/>
+      <circle cx="862" cy="600" r="5" fill="#fef08a"/>
+
+      <!-- ══ WHITE FLOWERS (center-left) ══ -->
+      <line x1="330" y1="618" x2="330" y2="597" stroke="#166534" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="330" cy="586" rx="4" ry="9"  fill="rgba(255,255,255,0.92)" transform="rotate(0   330 595)"/>
+      <ellipse cx="330" cy="586" rx="4" ry="9"  fill="rgba(255,255,255,0.85)" transform="rotate(60  330 595)"/>
+      <ellipse cx="330" cy="586" rx="4" ry="9"  fill="rgba(255,255,255,0.92)" transform="rotate(120 330 595)"/>
+      <ellipse cx="330" cy="586" rx="4" ry="9"  fill="rgba(255,255,255,0.85)" transform="rotate(180 330 595)"/>
+      <ellipse cx="330" cy="586" rx="4" ry="9"  fill="rgba(255,255,255,0.92)" transform="rotate(240 330 595)"/>
+      <ellipse cx="330" cy="586" rx="4" ry="9"  fill="rgba(255,255,255,0.85)" transform="rotate(300 330 595)"/>
+      <circle cx="330" cy="595" r="6" fill="#fde68a"/>
+
+      <!-- ══ PURPLE FLOWERS (center-right) ══ -->
+      <line x1="668" y1="618" x2="668" y2="597" stroke="#166534" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="668" cy="586" rx="4" ry="9"  fill="#a78bfa" transform="rotate(0   668 595)"/>
+      <ellipse cx="668" cy="586" rx="4" ry="9"  fill="#7c3aed" transform="rotate(60  668 595)"/>
+      <ellipse cx="668" cy="586" rx="4" ry="9"  fill="#a78bfa" transform="rotate(120 668 595)"/>
+      <ellipse cx="668" cy="586" rx="4" ry="9"  fill="#7c3aed" transform="rotate(180 668 595)"/>
+      <ellipse cx="668" cy="586" rx="4" ry="9"  fill="#a78bfa" transform="rotate(240 668 595)"/>
+      <ellipse cx="668" cy="586" rx="4" ry="9"  fill="#7c3aed" transform="rotate(300 668 595)"/>
+      <circle cx="668" cy="595" r="6" fill="#fde68a"/>
+
+      <!-- ══ ANIMATED FIREFLY DOTS (static positions, JS canvas does the drifting) ══ -->
+      <circle cx="290" cy="510" r="3" fill="#86efac" opacity="0.6">
+        <animate attributeName="opacity" values="0.6;0.05;0.6" dur="2.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="700" cy="488" r="2.8" fill="#5eead4" opacity="0.55">
+        <animate attributeName="opacity" values="0.55;0.05;0.55" dur="3.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="460" cy="545" r="2.5" fill="#86efac" opacity="0.5">
+        <animate attributeName="opacity" values="0.5;0.05;0.5" dur="2.2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="620" cy="522" r="2.8" fill="#a3e635" opacity="0.45">
+        <animate attributeName="opacity" values="0.45;0.05;0.45" dur="4.1s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="380" cy="572" r="2.5" fill="#86efac" opacity="0.5">
+        <animate attributeName="opacity" values="0.5;0.05;0.5" dur="3.3s" repeatCount="indefinite"/>
+      </circle>
+
+    </svg>
+
+    <!-- Aurora bands -->
+    <div class="aurora-wrap" aria-hidden="true">
+        <div class="aurora-band aurora-1"></div>
+        <div class="aurora-band aurora-2"></div>
+    </div>
+
+    <!-- Grain + vignette -->
+    <div class="app-bg"       aria-hidden="true"></div>
+    <div class="app-bg-noise" aria-hidden="true"></div>
+
+    <main class="page">
+        <div class="app-card">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="site-footer" aria-label="Footer">
+        <p class="copyright">© 2025 TrashRight. All rights reserved. Helping the world dispose smarter.</p>
+    </footer>
+
+    <!-- PWA: Service worker + auto-sync listener -->
+    <script>
+    (function () {
+        if (!('serviceWorker' in navigator)) return;
+
+        /* Register service worker */
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => {
+                /* Check for SW updates every time page loads */
+                reg.update();
+
+                /* New SW waiting — will activate on next navigation */
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    if (!newWorker) return;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            /* New version ready — activate silently */
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    });
+                });
+            })
+            .catch(() => {});
+
+        /* Listen for ITEMS_UPDATED message from SW background sync.
+           When admin adds/removes items, SW tells every open page.
+           We reload the ALL_ITEMS array in index.html if present. */
+        navigator.serviceWorker.addEventListener('message', function (event) {
+            if (event.data && event.data.type === 'ITEMS_UPDATED') {
+                /* If we're on the home page, refresh the autocomplete list */
+                if (window.location.pathname === '/' && typeof reloadAutoCompleteItems === 'function') {
+                    reloadAutoCompleteItems();
+                }
+                /* Show a subtle toast notification */
+                showSyncToast();
+            }
+        });
+
+        /* Reload page when new SW takes control */
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            window.location.reload();
+        });
+
+        /* ── Sync toast notification ── */
+        function showSyncToast() {
+            const existing = document.getElementById('syncToast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'syncToast';
+            toast.innerHTML = '<span>🔄</span><span>New items synced</span>';
+            toast.style.cssText = `
+                position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+                background: rgba(1,12,6,0.95); border: 1px solid rgba(34,197,94,0.4);
+                color: #86efac; font-family: 'Plus Jakarta Sans', sans-serif;
+                font-size: 13px; font-weight: 600; padding: 10px 18px;
+                border-radius: 999px; display: flex; align-items: center; gap: 8px;
+                box-shadow: 0 8px 28px rgba(0,0,0,0.4); z-index: 9999;
+                animation: toastIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
+            `;
+            document.head.insertAdjacentHTML('beforeend',
+                '<style>@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}</style>'
+            );
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    })();
+    </script>
+
+    <!-- Firefly particle engine -->
+    <script>
+    (function(){
+        const cv = document.getElementById('bg-canvas');
+        const cx = cv.getContext('2d');
+        function resize(){
+            cv.width  = window.innerWidth;
+            cv.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        const FF = Array.from({length: 45}, () => ({
+            x:  Math.random() * window.innerWidth,
+            y:  Math.random() * window.innerHeight,
+            r:  Math.random() * 1.6 + 0.3,
+            vx: (Math.random() - 0.5) * 0.2,
+            vy: (Math.random() - 0.5) * 0.15,
+            a:  Math.random(),
+            ad: Math.random() > 0.5 ? 1 : -1,
+            as: Math.random() * 0.006 + 0.003,
+            h:  Math.random() > 0.65 ? 160 : 142
+        }));
+        function tick(){
+            cx.clearRect(0, 0, cv.width, cv.height);
+            FF.forEach(f => {
+                f.x += f.vx; f.y += f.vy;
+                f.a += f.ad * f.as;
+                if(f.a >= 1){ f.a = 1; f.ad = -1; }
+                if(f.a <= 0){ f.a = 0; f.ad =  1; }
+                if(f.x < 0) f.x = cv.width;  if(f.x > cv.width)  f.x = 0;
+                if(f.y < 0) f.y = cv.height; if(f.y > cv.height) f.y = 0;
+                const g = cx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * 7);
+                g.addColorStop(0, `hsla(${f.h},88%,72%,${f.a * 0.85})`);
+                g.addColorStop(1, `hsla(${f.h},88%,60%,0)`);
+                cx.beginPath(); cx.arc(f.x, f.y, f.r * 7, 0, Math.PI*2);
+                cx.fillStyle = g; cx.fill();
+            });
+            requestAnimationFrame(tick);
+        }
+        tick();
+    })();
+    </script>
+
+
+    <!-- Page transition engine (single, clean, handles swipe-back) -->
+    <script>
+    (function () {
+
+        /* ── Page depth: determines forward vs back direction ── */
+        function depth(path) {
+            if (!path || path === '/')           return 0;  // Home
+            if (path.startsWith('/category'))    return 1;  // Category
+            if (path.startsWith('/results'))     return 2;  // Results
+            return 0;
+        }
+
+        const card         = document.querySelector('.app-card');
+        const currentDepth = depth(window.location.pathname);
+
+        /* ── Tag every history entry with its depth ── */
+        /* This lets popstate (swipe-back/forward) know which direction to animate */
+        const stateDepth = (history.state && history.state.depth != null)
+            ? history.state.depth
+            : currentDepth;
+        history.replaceState({ depth: stateDepth }, '');
+
+        /* ── Entrance animation on page load ── */
+        if (card) {
+            const dir = sessionStorage.getItem('tr-nav-dir');
+            sessionStorage.removeItem('tr-nav-dir');
+            const cls = dir === 'fwd'  ? 'entering-fwd'
+                      : dir === 'back' ? 'entering-back'
+                      : null;
+            if (cls) {
+                card.classList.add(cls);
+                card.addEventListener('animationend', () => {
+                    card.classList.remove('entering-fwd', 'entering-back');
+                }, { once: true });
+            } else {
+                /* First ever load — gentle fade-in from right */
+                card.classList.add('entering-fwd');
+                card.addEventListener('animationend', () => {
+                    card.classList.remove('entering-fwd');
+                }, { once: true });
+            }
+        }
+
+        /* ── Core: exit animation then navigate ── */
+        function go(href, isForward) {
+            if (!card) { window.location.href = href; return; }
+            sessionStorage.setItem('tr-nav-dir', isForward ? 'fwd' : 'back');
+            card.classList.add(isForward ? 'exiting-fwd' : 'exiting-back');
+            card.addEventListener('animationend', () => {
+                window.location.href = href;
+            }, { once: true });
+        }
+
+        /* ── Intercept <a> clicks ── */
+        document.addEventListener('click', function (e) {
+            const a = e.target.closest('a[href]');
+            if (!a) return;
+            const href = a.getAttribute('href');
+            if (!href || href.startsWith('http') || href.startsWith('//') ||
+                href.startsWith('#') || href.startsWith('mailto') ||
+                href.startsWith('data') || a.hasAttribute('download')) return;
+            e.preventDefault();
+            const isForward = depth(href) > currentDepth;
+            go(href, isForward);
+        });
+
+        /* ── Intercept form submit (search bar) ── */
+        document.addEventListener('submit', function (e) {
+            const form = e.target;
+            if (!form || (form.method || '').toLowerCase() !== 'post') return;
+            const input = form.querySelector('input[name="query"]');
+            if (!input || !input.value.trim()) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            go('/results?q=' + encodeURIComponent(input.value.trim()), true);
+        });
+
+        /* ── Handle browser swipe-back / swipe-forward (popstate) ── */
+        window.addEventListener('popstate', function (e) {
+            /* The new state has the depth of the page we're going TO */
+            const toDepth   = (e.state && e.state.depth != null) ? e.state.depth : 0;
+            const isForward = toDepth > currentDepth;
+            if (!card) return;
+            /* Play exit animation, then let the browser finish the navigation */
+            card.classList.add(isForward ? 'exiting-fwd' : 'exiting-back');
+            /* Browser already navigated — just animate out, page will reload */
+        });
+
+    })();
+    </script>
+
+
+    <!-- PWA: Service Worker registration -->
+    <script>
+    (function () {
+        if (!('serviceWorker' in navigator)) return;
+
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function (reg) {
+                    /* Check for updates every 60 seconds while app is open */
+                    setInterval(() => reg.update(), 60000);
+
+                    /* When a new service worker is waiting, activate it */
+                    reg.addEventListener('updatefound', function () {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', function () {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                /* New version available — silently activate */
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
+                })
+                .catch(function (err) {
+                    console.warn('Service worker registration failed:', err);
+                });
+
+            /* Reload page when new service worker takes control */
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+                window.location.reload();
+            });
+        });
+
+        /* ── Offline / Online indicator ── */
+        function updateOnlineStatus() {
+            const indicator = document.getElementById('online-indicator');
+            if (!indicator) return;
+            if (navigator.onLine) {
+                indicator.style.display = 'none';
+            } else {
+                indicator.style.display = 'flex';
+            }
+        }
+        window.addEventListener('online',  updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        window.addEventListener('load',    updateOnlineStatus);
+    })();
+    </script>
+
+    <!-- Offline banner — hidden by default, shown by JS when offline -->
+    <div id="online-indicator" style="display:none;
+         position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+         z-index:9999;background:rgba(120,53,15,0.95);
+         border:1px solid rgba(251,191,36,0.4);border-radius:999px;
+         padding:8px 18px;gap:8px;align-items:center;
+         font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;
+         color:#fde68a;backdrop-filter:blur(12px);
+         box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+        <span>⚡</span>
+        <span>You're offline — showing cached data</span>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

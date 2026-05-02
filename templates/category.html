@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{{ category }} Waste — TrashRight{% endblock %}
+
+{% block content %}
+
+<!-- Back -->
+<a href="/" class="back-btn" aria-label="Back to home">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back to home
+</a>
+
+<!-- Category header -->
+<div class="cat-page-header">
+    <div class="cat-page-gem" id="catGem"></div>
+    <div>
+        <div class="cat-page-title" id="catTitle">{{ category }}</div>
+        <div class="cat-page-subtitle" id="catSubtitle">Loading items…</div>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="stateLoading" class="cat-loading" role="status" aria-live="polite">
+    <div class="spinner"></div>
+    <div class="loading-text">Fetching items…</div>
+</div>
+
+<!-- Item list -->
+<div id="stateList" style="display:none;">
+    <div class="item-list" id="itemList"></div>
+</div>
+
+<!-- Empty -->
+<div id="stateEmpty" style="display:none;">
+    <div class="cat-empty">No items found in this category.</div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const CATEGORY = {{ category | tojson }};
+
+    const META = {
+        'Recyclable':        { icon: '♻️', gemCls: 'cat-page-gem-r', color: '#86efac', desc: 'Items that can be processed and reused' },
+        'Biodegradable':     { icon: '🌿', gemCls: 'cat-page-gem-b', color: '#5eead4', desc: 'Items that break down naturally' },
+        'Hazardous':         { icon: '⚠️', gemCls: 'cat-page-gem-h', color: '#fca5a5', desc: 'Items that require special disposal' },
+        'Non-biodegradable': { icon: '🚫', gemCls: 'cat-page-gem-n', color: '#fcd34d', desc: 'Items that do not break down naturally' },
+    };
+
+    const meta = META[CATEGORY] || { icon: '🗑️', gemCls: '', color: '#e8fdf2', desc: 'Waste items' };
+
+    // Set up header
+    const gem = document.getElementById('catGem');
+    gem.textContent = meta.icon;
+    gem.classList.add(meta.gemCls);
+
+    const title = document.getElementById('catTitle');
+    title.style.color = meta.color;
+
+    function showState(id) {
+        ['stateLoading', 'stateList', 'stateEmpty'].forEach(s => {
+            document.getElementById(s).style.display = s === id ? 'block' : 'none';
+        });
+    }
+
+    function truncate(text, max) {
+        return text.length > max ? text.slice(0, max).trimEnd() + '…' : text;
+    }
+
+    async function loadItems() {
+        showState('stateLoading');
+        try {
+            const res  = await fetch('/api/category/' + encodeURIComponent(CATEGORY));
+            const data = await res.json();
+
+            if (!data.found || !data.items || data.items.length === 0) {
+                showState('stateEmpty');
+                return;
+            }
+
+            document.getElementById('catSubtitle').textContent = meta.desc;
+
+            const list = document.getElementById('itemList');
+            list.innerHTML = data.items.map((item, i) => `
+                <a class="item-row"
+                   href="/results?q=${encodeURIComponent(item.name)}"
+                   style="animation-delay: ${i * 40}ms"
+                   aria-label="View disposal instructions for ${item.name}">
+                    <div class="item-row-left">
+                        <div class="item-row-num">${item.icon || meta.icon}</div>
+                        <div>
+                            <div class="item-row-name">${item.name}</div>
+                            <div class="item-row-preview">${truncate(item.instructions, 72)}</div>
+                        </div>
+                    </div>
+                    <svg class="item-row-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <path d="M5 2l5 5-5 5"/>
+                    </svg>
+                </a>
+            `).join('');
+
+            showState('stateList');
+        } catch (err) {
+            showState('stateEmpty');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadItems);
+</script>
+{% endblock %}
