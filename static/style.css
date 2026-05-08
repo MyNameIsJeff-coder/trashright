@@ -811,6 +811,8 @@ body {
 .cat-filter-pill svg {
     width: 15px; height: 15px;
     flex-shrink: 0;
+    color: #a7f3d0;
+    opacity: 0.6;
 }
 .cat-filter-input {
     flex: 1;
