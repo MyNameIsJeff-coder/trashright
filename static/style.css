@@ -787,6 +787,77 @@ body {
     .locator-sub { font-size: 10px; }
 }
 
+
+/* ── Category filter ─────────────────────────────────── */
+.cat-filter-wrap {
+    margin-bottom: 14px;
+    animation: fade-up 0.25s ease both;
+}
+.cat-filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 5px 14px 5px 14px;
+    transition: border-color 0.2s, background 0.2s;
+}
+.cat-filter-pill:focus-within {
+    border-color: rgba(34,197,94,0.45);
+    background: rgba(34,197,94,0.05);
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.08);
+}
+.cat-filter-pill svg {
+    width: 15px; height: 15px;
+    flex-shrink: 0;
+}
+.cat-filter-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--jak);
+    font-size: 14px;
+    color: var(--text);
+    padding: 9px 0;
+}
+.cat-filter-input::placeholder { color: var(--text3); }
+.cat-filter-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(134,239,172,0.6);
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 999px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+    display: none;
+}
+.cat-filter-mark {
+    background: transparent;
+    color: #4ade80;
+    font-weight: 700;
+}
+.cat-filter-empty {
+    text-align: center;
+    padding: 36px 20px;
+    animation: fade-up 0.2s ease both;
+}
+.cat-filter-empty-icon { font-size: 32px; margin-bottom: 12px; }
+.cat-filter-empty-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 6px;
+}
+.cat-filter-empty-sub { font-size: 12px; color: var(--text3); }
+
+@media (max-width: 640px) {
+    .cat-filter-pill { padding: 4px 12px; }
+    .cat-filter-input { font-size: 13px; padding: 8px 0; }
+}
+
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 640px) {
     .page { padding: 18px 16px 0; align-items: flex-start; }

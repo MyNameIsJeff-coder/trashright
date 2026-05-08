@@ -20,6 +20,26 @@
     </div>
 </div>
 
+<!-- Filter input — shown after items load -->
+<div class="cat-filter-wrap" id="catFilterWrap" style="display:none;">
+    <div class="cat-filter-pill">
+        <svg viewBox="0 0 18 18" fill="none" stroke="rgba(167,243,208,0.6)" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="7.5" r="5"/><path d="M13 13l-2.8-2.8"/>
+        </svg>
+        <input
+            class="cat-filter-input"
+            id="catFilterInput"
+            type="text"
+            placeholder="Filter items…"
+            maxlength="60"
+            autocomplete="off"
+            aria-label="Filter items in this category"
+        />
+        <span class="cat-filter-count" id="catFilterCount"></span>
+    </div>
+</div>
+
 <!-- Loading -->
 <div id="stateLoading" class="cat-loading" role="status" aria-live="polite">
     <div class="spinner"></div>
@@ -29,6 +49,11 @@
 <!-- Item list -->
 <div id="stateList" style="display:none;">
     <div class="item-list" id="itemList"></div>
+    <div class="cat-filter-empty" id="filterEmpty" style="display:none;">
+        <div class="cat-filter-empty-icon">🔍</div>
+        <div class="cat-filter-empty-text">No items match "<span id="filterEmptyQuery"></span>"</div>
+        <div class="cat-filter-empty-sub">Try a shorter or different keyword</div>
+    </div>
 </div>
 
 <!-- Empty -->
@@ -41,74 +66,94 @@
 {% block scripts %}
 <script>
     const CATEGORY = {{ category | tojson }};
-
     const META = {
         'Recyclable':        { icon: '♻️', gemCls: 'cat-page-gem-r', color: '#86efac', desc: 'Items that can be processed and reused' },
         'Biodegradable':     { icon: '🌿', gemCls: 'cat-page-gem-b', color: '#5eead4', desc: 'Items that break down naturally' },
         'Hazardous':         { icon: '⚠️', gemCls: 'cat-page-gem-h', color: '#fca5a5', desc: 'Items that require special disposal' },
         'Non-biodegradable': { icon: '🚫', gemCls: 'cat-page-gem-n', color: '#fcd34d', desc: 'Items that do not break down naturally' },
     };
-
     const meta = META[CATEGORY] || { icon: '🗑️', gemCls: '', color: '#e8fdf2', desc: 'Waste items' };
+    let allItems = [];
 
-    // Set up header
     const gem = document.getElementById('catGem');
     gem.textContent = meta.icon;
     gem.classList.add(meta.gemCls);
-
-    const title = document.getElementById('catTitle');
-    title.style.color = meta.color;
+    document.getElementById('catTitle').style.color = meta.color;
 
     function showState(id) {
-        ['stateLoading', 'stateList', 'stateEmpty'].forEach(s => {
+        ['stateLoading','stateList','stateEmpty'].forEach(s => {
             document.getElementById(s).style.display = s === id ? 'block' : 'none';
         });
     }
-
     function truncate(text, max) {
         return text.length > max ? text.slice(0, max).trimEnd() + '…' : text;
     }
-
+    function highlight(str, q) {
+        if (!q) return str;
+        const i = str.toLowerCase().indexOf(q.toLowerCase());
+        if (i === -1) return str;
+        return str.slice(0, i)
+             + '<mark class="cat-filter-mark">' + str.slice(i, i + q.length) + '</mark>'
+             + str.slice(i + q.length);
+    }
+    function renderItems(items, query) {
+        const list  = document.getElementById('itemList');
+        const empty = document.getElementById('filterEmpty');
+        const countEl = document.getElementById('catFilterCount');
+        if (items.length === 0) {
+            list.innerHTML = '';
+            empty.style.display = 'block';
+            document.getElementById('filterEmptyQuery').textContent = query;
+            countEl.style.display = 'none';
+            return;
+        }
+        empty.style.display = 'none';
+        list.innerHTML = items.map((item, i) => `
+            <a class="item-row"
+               href="/results?q=${encodeURIComponent(item.name)}"
+               style="animation-delay:${i * 30}ms"
+               aria-label="View disposal instructions for ${item.name}">
+                <div class="item-row-left">
+                    <div class="item-row-num">${item.icon || meta.icon}</div>
+                    <div>
+                        <div class="item-row-name">${highlight(item.name, query)}</div>
+                        <div class="item-row-preview">${truncate(item.instructions, 72)}</div>
+                    </div>
+                </div>
+                <svg class="item-row-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 2l5 5-5 5"/>
+                </svg>
+            </a>`).join('');
+        if (query) {
+            countEl.textContent = items.length + ' of ' + allItems.length;
+            countEl.style.display = 'inline';
+        } else {
+            countEl.style.display = 'none';
+        }
+    }
+    function filterItems(query) {
+        const q = query.trim().toLowerCase();
+        renderItems(q ? allItems.filter(item => item.name.toLowerCase().includes(q)) : allItems, query.trim());
+    }
     async function loadItems() {
         showState('stateLoading');
         try {
             const res  = await fetch('/api/category/' + encodeURIComponent(CATEGORY));
             const data = await res.json();
-
-            if (!data.found || !data.items || data.items.length === 0) {
-                showState('stateEmpty');
-                return;
-            }
-
+            if (!data.found || !data.items || data.items.length === 0) { showState('stateEmpty'); return; }
+            allItems = data.items;
             document.getElementById('catSubtitle').textContent = meta.desc;
-
-            const list = document.getElementById('itemList');
-            list.innerHTML = data.items.map((item, i) => `
-                <a class="item-row"
-                   href="/results?q=${encodeURIComponent(item.name)}"
-                   style="animation-delay: ${i * 40}ms"
-                   aria-label="View disposal instructions for ${item.name}">
-                    <div class="item-row-left">
-                        <div class="item-row-num">${item.icon || meta.icon}</div>
-                        <div>
-                            <div class="item-row-name">${item.name}</div>
-                            <div class="item-row-preview">${truncate(item.instructions, 72)}</div>
-                        </div>
-                    </div>
-                    <svg class="item-row-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                         aria-hidden="true">
-                        <path d="M5 2l5 5-5 5"/>
-                    </svg>
-                </a>
-            `).join('');
-
+            renderItems(allItems, '');
             showState('stateList');
-        } catch (err) {
-            showState('stateEmpty');
-        }
+            document.getElementById('catFilterWrap').style.display = 'block';
+            const input = document.getElementById('catFilterInput');
+            input.addEventListener('input', function() { filterItems(this.value); });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') { this.value = ''; filterItems(''); this.blur(); }
+            });
+        } catch (err) { showState('stateEmpty'); }
     }
-
     document.addEventListener('DOMContentLoaded', loadItems);
 </script>
 {% endblock %}
