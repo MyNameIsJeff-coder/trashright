@@ -809,9 +809,15 @@ body {
     box-shadow: 0 0 0 3px rgba(34,197,94,0.08);
 }
 .cat-filter-pill .cat-filter-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 14px;
-    flex-shrink: 0;
+    line-height: 1;
     opacity: 0.6;
+    flex-shrink: 0;
 }
 .cat-filter-input {
     flex: 1;
